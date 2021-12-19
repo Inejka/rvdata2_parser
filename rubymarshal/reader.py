@@ -3,6 +3,23 @@ import re
 
 link_error_str = "LINK_ERROR_IND_"
 
+
+class MyList(list):
+    def __hash__(self):
+        temp_hash = 0
+        for i in self:
+            temp_hash += hash(i)
+        return temp_hash
+
+
+class MyDict(dict):
+    def __hash__(self):
+        temp_hash = 0
+        for i in self:
+            temp_hash += hash(i)
+        return temp_hash
+
+
 from rubymarshal.classes import (
     UsrMarshal,
     Symbol,
@@ -103,7 +120,7 @@ class Reader:
                     try:
                         result = result.decode("unicode-escape")
                     except:
-                        #print("PASS DECODE")
+                        # print("PASS DECODE")
                         # -------------------------------------------------------------------------------------------------------------------------------
                         pass
             # string instance attributes are discarded
@@ -128,19 +145,22 @@ class Reader:
         elif token == TYPE_ARRAY:
             num_elements = self.read_long()
             # noinspection PyUnusedLocal
-            result = [self.read() for x in range(num_elements)]
+            result = MyList()
+            for x in range(num_elements):
+                result.append(self.read())
         elif token == TYPE_HASH:
             num_elements = self.read_long()
-            result = {}
+            result = MyDict()
             for x in range(num_elements):
                 key = self.read()
                 value = self.read()
                 try:
                     result[key] = value
-                except:
+                except Exception as ex:
                     print("----")
-                    print("key",key)
-                    print("value",value)
+                    print(ex)
+                    print("key", key)
+                    print("value", value)
             result = result
         elif token == TYPE_FLOAT:
             size = self.read_long()

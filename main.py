@@ -8,9 +8,9 @@ from rubymarshal.writer import writes, write
 # with open("repacked/test.rvdata2", 'wb') as file:
 #    write(file,test)
 
-for i in os.listdir("another_examples"):
-    with open("another_examples/" + i, 'rb') as file:
-        test = load(file)
-    with open("repacked/" + i, 'wb') as file:
-        write(file, test)
+for i in os.listdir("examples"):
+    # with open("examples/" + i, 'rb') as file:
+    unp.unpack("examples/" + i)
+# with open("repacked/" + i, 'wb') as file:
+#     write(file, test)
 # CommontEvents )0)
