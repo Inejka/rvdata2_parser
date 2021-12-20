@@ -1,6 +1,7 @@
 import io
 import math
 import re
+import zlib
 
 from rubymarshal.classes import (
     Symbol,
@@ -174,10 +175,17 @@ class Writer:
                 encoding = attributes["encoding"].decode()
             else:
                 attributes["E"] = True
-            encoded = obj.encode(encoding)
-            self.fd.write(TYPE_IVAR)
-            self.write_bytes(encoded)
-            self.write_attributes(attributes)
+            if not hasattr(obj, "IS_COMPRESSED"):
+                encoded = obj.encode(encoding)
+                self.fd.write(TYPE_IVAR)
+                self.write_bytes(encoded)
+                self.write_attributes(attributes)
+            else:
+                encoded = obj.encode("utf-8")
+                compressed = zlib.compress(encoded)
+                self.fd.write(TYPE_IVAR)
+                self.write_bytes(compressed)
+                self.write_attributes(attributes)
 
     def write_string(self, obj):
         obj = obj.encode("utf-8")
@@ -212,15 +220,27 @@ class Writer:
             self.fd.write(TYPE_SYMLINK)
             self.write_long(self.symbols[obj.name])
         else:
-            self.fd.write(TYPE_SYMBOL)
-            symbol_index = len(self.symbols)
-            self.symbols[obj.name] = symbol_index
-            encoded = obj.name.encode("utf-8")
-            self.write_long(len(encoded))
-            self.fd.write(encoded)
+            if not (hasattr(obj, "attributes")):
+                self.fd.write(TYPE_SYMBOL)
+                symbol_index = len(self.symbols)
+                self.symbols[obj.name] = symbol_index
+                encoded = obj.name.encode("utf-8")
+                self.write_long(len(encoded))
+                self.fd.write(encoded)
+            else:
+                symbol_index = len(self.symbols)
+                self.symbols[obj.name] = symbol_index
+                obj = obj.name.encode("utf-8")
+                self.fd.write(TYPE_IVAR)
+                self.fd.write(TYPE_SYMBOL)
+                self.write_long(len(obj))
+                self.fd.write(obj)
+                self.write_long(1)
+                self.write(Symbol("E"))
+                self.write(True)
 
     def write_int(self, obj):
-        if obj.bit_length() <= 5 * 8:
+        if obj.bit_length() <= 5 * 8 and (obj > -1073741824 and obj < 1073741824):
             self.fd.write(TYPE_FIXNUM)
             # noinspection PyTypeChecker
             self.write_long(obj)

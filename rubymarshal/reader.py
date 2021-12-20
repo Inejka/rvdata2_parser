@@ -1,5 +1,6 @@
 import io
 import re
+import zlib
 
 link_error_str = "LINK_ERROR_IND_"
 
@@ -112,15 +113,20 @@ class Reader:
                 if options & 4:
                     flags |= re.MULTILINE
             attributes = self.read_attributes()
+            KOSTYA = False
             if sub_token in (TYPE_STRING, TYPE_REGEXP):
                 encoding = self._get_encoding(attributes)
                 try:
                     result = result.decode(encoding)
                 except UnicodeDecodeError as u:
                     try:
-                        result = result.decode("unicode-escape")
+                        # result = str(result)
+                        # result = result.encode("latin1")
+                        result = zlib.decompress(result)
+                        result = result.decode("utf-8")
+                        KOSTYA = True
                     except:
-                        # print("PASS DECODE")
+                        result = result.decode("unicode-escape")
                         # -------------------------------------------------------------------------------------------------------------------------------
                         pass
             # string instance attributes are discarded
@@ -133,8 +139,10 @@ class Reader:
                 try:
                     result.set_attributes(attributes)
                 except:
-                    print("YEP")
+                    result.attributes = attributes
                     # -------------------------------------------------------------------------------------------------------------------------------
+            if KOSTYA:
+                result.IS_COMPRESSED = True
         elif token == TYPE_STRING:
             size = self.read_long()
             result = self.fd.read(size)
@@ -154,13 +162,7 @@ class Reader:
             for x in range(num_elements):
                 key = self.read()
                 value = self.read()
-                try:
-                    result[key] = value
-                except Exception as ex:
-                    print("----")
-                    print(ex)
-                    print("key", key)
-                    print("value", value)
+                result[key] = value
             result = result
         elif token == TYPE_FLOAT:
             size = self.read_long()
